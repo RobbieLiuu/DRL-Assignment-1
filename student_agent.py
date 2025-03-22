@@ -20,16 +20,18 @@ def get_random_action(obs):
     # You can submit this random agent to evaluate the performance of a purely random strategy.
 
 
-with open("q_table.pkl", "rb") as f:
+with open("q_table_no_abs_w_obstacle.pkl", "rb") as f:
     Q_table = pickle.load(f)
 
 
 action_name = ["Move South", "Move North", "Move East", "Move West", "PICKUP","DROPOFF"]
-phase = "find passenger"
+phase = 'find passenger'
 ongoing_pickup_idx = 0
 ongoing_destination_idx = 0
 delta = 0.1
 correct_pickup_idx = -1
+first_time_find_passenger = 0
+
 
 def state_to_q_state(state , phase, ongoing_pickup_idx, ongoing_destination_idx):
 
@@ -43,18 +45,18 @@ def state_to_q_state(state , phase, ongoing_pickup_idx, ongoing_destination_idx)
     destination_look = state[-1]
     stations_pos = [(state[2],state[3]),(state[4],state[5]),(state[6],state[7]),(state[8],state[9])]
 
-    if phase == "find passenger":
-        dx = abs(taxi_row - stations_pos[ongoing_pickup_idx][0])
-        dy = abs(taxi_col - stations_pos[ongoing_pickup_idx][1])
+    if phase == 'find passenger':
+        dx = (taxi_row - stations_pos[ongoing_pickup_idx][0])
+        dy = (taxi_col - stations_pos[ongoing_pickup_idx][1])
 
         return (dx, dy, phase, passenger_look, obstacle_north, obstacle_south, obstacle_east, obstacle_west)
         #return (dx, dy, phase, passenger_look)
 
 
 
-    elif phase == "move to destination":
-        dx = abs(taxi_row - stations_pos[ongoing_destination_idx][0])
-        dy = abs(taxi_col - stations_pos[ongoing_destination_idx][1])
+    elif phase == 'move to destination':
+        dx = (taxi_row - stations_pos[ongoing_destination_idx][0])
+        dy = (taxi_col - stations_pos[ongoing_destination_idx][1])
         return (dx, dy, phase, destination_look, obstacle_north, obstacle_south, obstacle_east, obstacle_west)
         #return (dx, dy, phase, destination_look)
     
@@ -67,6 +69,7 @@ def get_action(obs):
     global ongoing_destination_idx
     global delta
     global correct_pickup_idx
+    global first_time_find_passenger
 
     state = obs
 
@@ -84,48 +87,51 @@ def get_action(obs):
          
 
 
-    # change variable value (after this action)
-    if phase == "find passenger":
-            taxi_pos = (state[0],state[1])
-            distance_to_ongoing_pickup = abs(taxi_pos[0]-stations_pos[ongoing_pickup_idx ][0]) + abs(taxi_pos[1]-stations_pos[ongoing_pickup_idx ][1])
-            passenger_look = state[-2]
-                
-            if distance_to_ongoing_pickup <= 1 and passenger_look == False: #went to wrong station
-                    ongoing_pickup_idx = (ongoing_pickup_idx + 1)%4
-       #             if action_name[action] == "PICKUP" or action_name[action] == "DROPOFF":
-        #                shaped_reward -= 10
+    if phase == 'find passenger':
+        taxi_pos = (state[0],state[1])
+        distance_to_ongoing_pickup = abs(taxi_pos[0]-stations_pos[ongoing_pickup_idx ][0]) + abs(taxi_pos[1]-stations_pos[ongoing_pickup_idx ][1])
+        passenger_look = state[-2]
+        
+        if distance_to_ongoing_pickup <= 1 and passenger_look == False: #went to wrong station
+            ongoing_pickup_idx = (ongoing_pickup_idx + 1)%4
+            # if action_name[action] == "PICKUP" or action_name[action] == "DROPOFF":
+                # shaped_reward -= 10
 
-            elif distance_to_ongoing_pickup == 0 and passenger_look == True: # right pickup point
-                    if action_name[action] == "PICKUP":
-                        phase == "move to destination"
-                     #   shaped_reward += 25
-                        correct_pickup_idx = ongoing_pickup_idx
-                        if correct_pickup_idx == ongoing_destination_idx:
-                            ongoing_destination_idx = (ongoing_destination_idx + 1)%4
-               #     else:
-                #        shaped_reward -= 10
-
-                    
-    elif phase == "move to destination":
-                taxi_pos = (state[0],state[1])
-                distance_to_ongoing_destination = abs(taxi_pos[0]-stations_pos[ongoing_destination_idx ][0]) + abs(taxi_pos[1]-stations_pos[ongoing_destination_idx][1])
-                destination_look = state[-1]
-
-                if distance_to_ongoing_destination <= 1 and passenger_look == False: #went to wrong destination
+        elif distance_to_ongoing_pickup == 0 and passenger_look == True : # right pickup point
+            if action_name[action] == "PICKUP":
+                phase == 'move to destination'
+                if first_time_find_passenger == 0:
+                    # shaped_reward += 25
+                    correct_pickup_idx = ongoing_pickup_idx
+                    first_time_find_passenger  = 1
+                if correct_pickup_idx == ongoing_destination_idx:
                     ongoing_destination_idx = (ongoing_destination_idx + 1)%4
-                    if correct_pickup_idx == ongoing_destination_idx:
-                        ongoing_destination_idx = (ongoing_destination_idx + 1)%4
-                 #   if action_name[action] == "PICKUP":
-                  #      shaped_reward -= 10
-                   # elif action_name[action] == "DROPOFF":
-                    #    shaped_reward -= 50
+            # else:
+            #     shaped_reward -= 10
 
-                
-          #      elif distance_to_ongoing_destination == 0 and passenger_look == True: # right dropoff point
-           #         if action_name[action] == "DROPOFF":
-                 #       shaped_reward += 50
-            #            correct_destination_idx = ongoing_destination_idx
-               #     else:
-                #        shaped_reward -= 10
+            
+    elif phase == 'move to destination':
+        taxi_pos = (state[0],state[1])
+        distance_to_ongoing_destination = abs(taxi_pos[0]-stations_pos[ongoing_destination_idx ][0]) + abs(taxi_pos[1]-stations_pos[ongoing_destination_idx][1])
+        destination_look = state[-1]
+
+        if distance_to_ongoing_destination <= 1 and destination_look == False: #went to wrong destination
+            ongoing_destination_idx = (ongoing_destination_idx + 1)%4
+            if correct_pickup_idx == ongoing_destination_idx:
+                ongoing_destination_idx = (ongoing_destination_idx + 1)%4
+            # if action_name[action] == "PICKUP":
+            #     shaped_reward -= 10
+            elif action_name[action] == "DROPOFF":
+                # shaped_reward -= 50
+                phase = 'find passenger'
+
+        
+        elif distance_to_ongoing_destination == 0 and destination_look == True: # right dropoff point
+            if action_name[action] == "DROPOFF":
+                # shaped_reward += 50
+                correct_destination_idx = ongoing_destination_idx
+            # else:
+            #     shaped_reward -= 10
+
 
     return action
