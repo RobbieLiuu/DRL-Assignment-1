@@ -105,12 +105,12 @@ def q_learning( episodes=10000, alpha=0.1, gamma=0.99,
                 distance_to_ongoing_pickup = abs(taxi_pos[0]-stations_pos[ongoing_pickup_idx ][0]) + abs(taxi_pos[1]-stations_pos[ongoing_pickup_idx ][1])
                 passenger_look = state[-2]
                 
-                if distance_to_ongoing_pickup <= 1 and passenger_look == False: #went to wrong station
+                if distance_to_ongoing_pickup <= 1 and passenger_look == 0: #went to wrong station
                     ongoing_pickup_idx = (ongoing_pickup_idx + 1)%4
                     if action_name[action] == "PICKUP" or action_name[action] == "DROPOFF":
                         shaped_reward -= 10
 
-                elif distance_to_ongoing_pickup == 0 and passenger_look == True : # right pickup point
+                elif distance_to_ongoing_pickup == 0 and passenger_look == 1: # right pickup point
                     if action_name[action] == "PICKUP":
                         phase == 'move to destination'
                         if first_time_find_passenger == 0:
@@ -128,18 +128,18 @@ def q_learning( episodes=10000, alpha=0.1, gamma=0.99,
                 distance_to_ongoing_destination = abs(taxi_pos[0]-stations_pos[ongoing_destination_idx ][0]) + abs(taxi_pos[1]-stations_pos[ongoing_destination_idx][1])
                 destination_look = state[-1]
 
-                if distance_to_ongoing_destination <= 1 and destination_look == False: #went to wrong destination
+                if distance_to_ongoing_destination <= 1 and destination_look == 0: #went to wrong destination
                     ongoing_destination_idx = (ongoing_destination_idx + 1)%4
                     if correct_pickup_idx == ongoing_destination_idx:
                         ongoing_destination_idx = (ongoing_destination_idx + 1)%4
                     if action_name[action] == "PICKUP":
                         shaped_reward -= 10
                     elif action_name[action] == "DROPOFF":
-                        shaped_reward -= 50
+                        shaped_reward -= 200
                         phase = 'find passenger'
 
                 
-                elif distance_to_ongoing_destination == 0 and destination_look == True: # right dropoff point
+                elif distance_to_ongoing_destination == 0 and destination_look == 1: # right dropoff point
                     if action_name[action] == "DROPOFF":
                         shaped_reward += 50
                         correct_destination_idx = ongoing_destination_idx
@@ -167,7 +167,7 @@ def q_learning( episodes=10000, alpha=0.1, gamma=0.99,
             total_reward += reward
 
             # TODO: Initialize the next state in the Q-table if not already present.
-            next_q_state = state_to_q_state(state,phase,ongoing_pickup_idx,ongoing_destination_idx)
+            next_q_state = state_to_q_state(next_state,phase,ongoing_pickup_idx,ongoing_destination_idx)
             if next_q_state not in q_table:
                 q_table[next_q_state] = np.zeros(len(action_name))
 
@@ -191,8 +191,8 @@ def q_learning( episodes=10000, alpha=0.1, gamma=0.99,
 
 
 if __name__ == "__main__":
-    q_table, rewards_per_episode = q_learning(episodes=250000,decay_rate=0.99999)
-    with open("q_table_no_abs_w_obstacle.pkl", "wb") as f:
+    q_table, rewards_per_episode = q_learning(episodes=250000,decay_rate=0.99998)
+    with open("q_table_change_next_State.pkl", "wb") as f:
         pickle.dump(q_table, f)
     print("q table saved")
 

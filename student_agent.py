@@ -20,7 +20,7 @@ def get_random_action(obs):
     # You can submit this random agent to evaluate the performance of a purely random strategy.
 
 
-with open("q_table_no_abs_w_obstacle.pkl", "rb") as f:
+with open("q_table_change_next_State.pkl", "rb") as f:
     Q_table = pickle.load(f)
 
 
